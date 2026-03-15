@@ -40,12 +40,35 @@ python3 tools/test_sva_sby.py
 python3 tools/test_formal.py
 ```
 
+Run the shared smoke test:
+
+```bash
+bash tools/smoke_test.sh
+```
+
 Run the standalone wrapper:
 
 ```bash
 ./formal examples/sva/assert_raw_delay_pass.sby
 ./formal examples/sva/assert_raw_delay_pass.sv
 ```
+
+## CI And Push Gating
+
+The repo now includes:
+
+- `.github/workflows/smoke.yml`: runs the smoke test on every push and pull request
+- `.githooks/pre-push`: blocks local pushes when the smoke test fails
+
+Enable the repo-local `pre-push` hook in this clone with:
+
+```bash
+bash tools/install_git_hooks.sh
+```
+
+On GitHub, the workflow will mark the pushed revision red if the smoke test
+fails. If you also want GitHub to reject merges until the workflow passes, add
+branch protection for the `smoke` workflow in the repository settings.
 
 ## Layout
 

@@ -101,6 +101,12 @@ For shorter day-to-day use there is also a repo-local wrapper:
 ./formal examples/sva/assert_raw_delay_pass.sv
 ```
 
+Shared smoke test:
+
+```bash
+bash tools/smoke_test.sh
+```
+
 When `./formal` is given a `.sby` or `.sv` path directly it defaults to the
 `sby` subcommand, infers `--top` from the filename for direct `.sv` input, and
 creates a default workdir under `build/formal_runs/`.
