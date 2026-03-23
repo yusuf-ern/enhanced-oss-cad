@@ -63,6 +63,35 @@ endmodule
         self.assertIn("// sva_sby: removed default disable iff (reset)", normalized)
         self.assertIn("assert property (@(posedge clock) disable iff (reset) a |=> b);", normalized)
 
+    def test_normalize_ebmc_text_expands_multiline_defaults_and_action(self) -> None:
+        normalized = normalize_ebmc_text(
+            """module top(input logic clock, input logic reset, input logic a, input logic b);
+default clocking cb
+    @(posedge clock);
+endclocking
+default disable iff
+    (reset);
+assert property (
+    a |=> b);
+endmodule
+"""
+        )
+        self.assertIn("// sva_sby: removed default clocking clock", normalized)
+        self.assertIn("// sva_sby: removed default disable iff (reset)", normalized)
+        self.assertIn("assert property (@(posedge clock) disable iff (reset) a |=> b);", normalized)
+
+    def test_normalize_ebmc_text_applies_default_disable_to_explicit_clock(self) -> None:
+        normalized = normalize_ebmc_text(
+            """module top(input logic clock, input logic reset, input logic a, input logic b);
+default disable iff (reset);
+assert property (@(posedge clock)
+    a |=> b);
+endmodule
+"""
+        )
+        self.assertIn("// sva_sby: removed default disable iff (reset)", normalized)
+        self.assertIn("assert property (@(posedge clock) disable iff (reset) a |=> b);", normalized)
+
     def test_prepare_sby_preserves_mode_and_engines(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -113,6 +142,45 @@ demo.sv
             lowered_text = lowered.read_text()
             self.assertIn("`ifdef FORMAL", lowered_text)
             self.assertIn("assert (", lowered_text)
+
+    def test_prepare_sby_lowers_multiline_inline_property_statement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source_dir = root / "src"
+            source_dir.mkdir()
+            workdir = root / "work"
+
+            sv_path = source_dir / "demo.sv"
+            sv_path.write_text(
+                """module demo(input logic clk, input logic a, input logic b);
+assert property (@(posedge clk)
+    a |-> b);
+endmodule
+"""
+            )
+
+            sby_path = source_dir / "demo.sby"
+            sby_path.write_text(
+                """[options]
+mode bmc
+depth 4
+
+[engines]
+smtbmc yices
+
+[script]
+read -formal -sv demo.sv
+prep -top demo
+
+[files]
+demo.sv
+"""
+            )
+
+            prepare_sby(sby_path, workdir)
+            lowered_text = (workdir / "files" / "demo.sv").read_text()
+            self.assertIn("// sva_lower: lowered assert property (anon_0)", lowered_text)
+            self.assertIn("if ((a)) assert ((b));", lowered_text)
 
     def test_prepare_sby_supports_tasks_aliases_and_inline_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

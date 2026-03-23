@@ -18,9 +18,10 @@ TOOL_BIN = ROOT.parents[1] / "oss-cad-suite" / "bin"
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from sva_lower import (  # noqa: E402
-    ACTION_LINE_RE,
+    ACTION_STATEMENT_RE,
     DEFAULT_CLOCKING_RE,
     DEFAULT_DISABLE_RE,
+    PROPERTY_BODY_RE,
     lower_file,
     lower_text,
 )
@@ -236,48 +237,56 @@ def stage_source_path_raw(source_path: Path, staged_path: Path) -> None:
 def normalize_ebmc_text(text: str) -> str:
     default_clock: str | None = None
     default_disable: str | None = None
-    filtered_lines: list[str] = []
 
-    for line in text.splitlines(keepends=True):
-        clock_match = DEFAULT_CLOCKING_RE.fullmatch(line.strip())
-        if clock_match:
-            if default_clock is None:
-                default_clock = clock_match.group("clock").strip()
-            filtered_lines.append(f"// sva_sby: removed default clocking {default_clock}\n")
-            continue
+    def collect_clock(match: re.Match[str]) -> str:
+        nonlocal default_clock
+        if default_clock is None:
+            default_clock = match.group("clock").strip()
+        return f"// sva_sby: removed default clocking {default_clock}\n"
 
-        disable_match = DEFAULT_DISABLE_RE.fullmatch(line.strip())
-        if disable_match:
-            if default_disable is None:
-                default_disable = disable_match.group("disable").strip()
-            filtered_lines.append(f"// sva_sby: removed default disable iff ({default_disable})\n")
-            continue
+    def collect_disable(match: re.Match[str]) -> str:
+        nonlocal default_disable
+        if default_disable is None:
+            default_disable = match.group("disable").strip()
+        return f"// sva_sby: removed default disable iff ({default_disable})\n"
 
-        filtered_lines.append(line)
+    transformed = DEFAULT_CLOCKING_RE.sub(collect_clock, text)
+    transformed = DEFAULT_DISABLE_RE.sub(collect_disable, transformed)
 
-    if default_clock is None:
-        return "".join(filtered_lines)
+    if default_clock is None and default_disable is None:
+        return transformed
 
-    rewritten: list[str] = []
-    for line in filtered_lines:
-        match = ACTION_LINE_RE.fullmatch(line.rstrip("\n"))
-        if match is None:
-            rewritten.append(line)
-            continue
+    rewritten_parts: list[str] = []
+    last_end = 0
+    for match in ACTION_STATEMENT_RE.finditer(transformed):
+        rewritten_parts.append(transformed[last_end:match.start()])
 
         body = match.group("body").strip()
-        if "@(" in body:
-            rewritten.append(line)
-            continue
+        body_match = PROPERTY_BODY_RE.fullmatch(body)
+        if body_match is not None:
+            clock = body_match.group("clock").strip()
+            disable = body_match.group("disable")
+            expr = body_match.group("expr").strip()
+            disable_value = disable.strip() if disable is not None else default_disable
+        else:
+            if default_clock is None:
+                rewritten_parts.append(match.group(0))
+                last_end = match.end()
+                continue
+            clock = default_clock
+            disable_value = default_disable
+            expr = body
 
-        prefix = f"@(posedge {default_clock}) "
-        if default_disable is not None:
-            prefix += f"disable iff ({default_disable}) "
-        rewritten.append(
-            f"{match.group('indent')}{match.group('kind')} property ({prefix}{body});\n"
+        prefix = f"@(posedge {clock}) "
+        if disable_value is not None:
+            prefix += f"disable iff ({disable_value}) "
+        rewritten_parts.append(
+            f"{match.group('indent')}{match.group('kind')} property ({prefix}{expr});\n"
         )
+        last_end = match.end()
 
-    return "".join(rewritten)
+    rewritten_parts.append(transformed[last_end:])
+    return "".join(rewritten_parts)
 
 
 def stage_ebmc_source_path(source_path: Path, staged_path: Path) -> None:

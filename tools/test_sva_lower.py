@@ -113,6 +113,25 @@ endmodule
         self.assertIn("reg [1:0] __sva_cover_anon_1_stage;", lowered)
         self.assertIn("if ((__sva_cover_anon_1_stage == 2'd2) && (c)) cover (1'b1);", lowered)
 
+    def test_lowers_multiline_default_clocking_disable_and_action(self) -> None:
+        source = """
+module top(input logic clk, input logic rst_n, input logic a, input logic b);
+default clocking cb
+    @(posedge clk);
+endclocking
+default disable iff
+    (!rst_n);
+assert property (
+    a |-> b);
+endmodule
+"""
+        lowered = lower_text(source)
+        self.assertIn("// sva_lower: removed default clocking clk", lowered)
+        self.assertIn("// sva_lower: removed default disable iff (!rst_n)", lowered)
+        self.assertIn("// sva_lower: lowered assert property (anon_0)", lowered)
+        self.assertIn("always @(posedge clk) begin", lowered)
+        self.assertIn("if ((a)) assert ((b));", lowered)
+
     def test_lowers_inline_property_with_explicit_clock(self) -> None:
         source = """
 module top(input logic clk, input logic a);
@@ -123,6 +142,18 @@ endmodule
         self.assertIn("// sva_lower: lowered assert property (anon_0)", lowered)
         self.assertIn("always @(posedge clk) begin", lowered)
         self.assertIn("if (1'b1) assert ((a));", lowered)
+
+    def test_lowers_multiline_inline_property_with_explicit_clock(self) -> None:
+        source = """
+module top(input logic clk, input logic a, input logic b);
+assert property (@(posedge clk)
+    a |-> b);
+endmodule
+"""
+        lowered = lower_text(source)
+        self.assertIn("// sva_lower: lowered assert property (anon_0)", lowered)
+        self.assertIn("always @(posedge clk) begin", lowered)
+        self.assertIn("if ((a)) assert ((b));", lowered)
 
     def test_lowers_implication_with_leading_delay_in_consequent(self) -> None:
         source = """

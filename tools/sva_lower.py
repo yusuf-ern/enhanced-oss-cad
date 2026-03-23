@@ -57,12 +57,12 @@ DEFAULT_CLOCKING_RE = re.compile(
     \s*@\(\s*posedge\s+(?P<clock>[^)]+?)\s*\)\s*;
     \s*endclocking\s*;?\s*$
     """,
-    re.VERBOSE,
+    re.MULTILINE | re.VERBOSE,
 )
 
 DEFAULT_DISABLE_RE = re.compile(
     r"^\s*default\s+disable\s+iff\s*\(\s*(?P<disable>.*?)\s*\)\s*;\s*$",
-    re.DOTALL,
+    re.DOTALL | re.MULTILINE,
 )
 
 ACTION_LINE_RE = re.compile(
@@ -73,6 +73,16 @@ ACTION_LINE_RE = re.compile(
     \s*$
     """,
     re.DOTALL | re.VERBOSE,
+)
+
+ACTION_STATEMENT_RE = re.compile(
+    r"""
+    ^(?P<indent>[ 	]*)
+    (?P<kind>assert|assume|cover|`\w+)
+    \s+property\s*\(\s*(?P<body>.*?)\s*\)\s*;
+    [ 	]*$
+    """,
+    re.DOTALL | re.MULTILINE | re.VERBOSE,
 )
 
 FIXED_HOLD_RE = re.compile(
@@ -2008,27 +2018,22 @@ def lower_text(text: str, bounded_eventual_depth: int | None = None) -> str:
     default_clock: str | None = None
     default_disable: str | None = None
 
-    filtered_lines: list[str] = []
-    for line in text.splitlines(keepends=True):
-        clock_match = DEFAULT_CLOCKING_RE.fullmatch(line.strip())
-        if clock_match:
-            if default_clock is not None:
-                raise ValueError("Multiple default clocking declarations are unsupported")
-            default_clock = clock_match.group("clock").strip()
-            filtered_lines.append(f"// sva_lower: removed default clocking {default_clock}\n")
-            continue
+    def collect_clock(match: re.Match[str]) -> str:
+        nonlocal default_clock
+        if default_clock is not None:
+            raise ValueError("Multiple default clocking declarations are unsupported")
+        default_clock = match.group("clock").strip()
+        return f"// sva_lower: removed default clocking {default_clock}\n"
 
-        disable_match = DEFAULT_DISABLE_RE.fullmatch(line.strip())
-        if disable_match:
-            if default_disable is not None:
-                raise ValueError("Multiple default disable iff declarations are unsupported")
-            default_disable = disable_match.group("disable").strip()
-            filtered_lines.append(f"// sva_lower: removed default disable iff ({default_disable})\n")
-            continue
+    def collect_disable(match: re.Match[str]) -> str:
+        nonlocal default_disable
+        if default_disable is not None:
+            raise ValueError("Multiple default disable iff declarations are unsupported")
+        default_disable = match.group("disable").strip()
+        return f"// sva_lower: removed default disable iff ({default_disable})\n"
 
-        filtered_lines.append(line)
-
-    transformed = "".join(filtered_lines)
+    transformed = DEFAULT_CLOCKING_RE.sub(collect_clock, text)
+    transformed = DEFAULT_DISABLE_RE.sub(collect_disable, transformed)
 
     def collect_sequence(match: re.Match[str]) -> str:
         name = match.group("name")
@@ -2048,14 +2053,10 @@ def lower_text(text: str, bounded_eventual_depth: int | None = None) -> str:
     emitted_blocks: list[str] = []
     unsupported_error: str | None = None
     action_index = 0
-    rewritten_lines: list[str] = []
-
-    for line in transformed.splitlines(keepends=True):
-        match = ACTION_LINE_RE.fullmatch(line.rstrip("\n"))
-        if not match:
-            rewritten_lines.append(line)
-            continue
-
+    rewritten_parts: list[str] = []
+    last_end = 0
+    for match in ACTION_STATEMENT_RE.finditer(transformed):
+        rewritten_parts.append(transformed[last_end:match.start()])
         kind = match.group("kind")
         body = match.group("body").strip()
         comment_name = body
@@ -2081,13 +2082,15 @@ def lower_text(text: str, bounded_eventual_depth: int | None = None) -> str:
                     bounded_eventual_depth=bounded_eventual_depth,
                 )
             )
-            rewritten_lines.append(f"// sva_lower: lowered {kind} property ({comment_name})\n")
+            rewritten_parts.append(f"{match.group('indent')}// sva_lower: lowered {kind} property ({comment_name})\n")
         except ValueError as exc:
             if unsupported_error is None:
                 unsupported_error = str(exc)
-            rewritten_lines.append(line)
+            rewritten_parts.append(match.group(0))
+        last_end = match.end()
 
-    transformed = "".join(rewritten_lines)
+    rewritten_parts.append(transformed[last_end:])
+    transformed = "".join(rewritten_parts)
 
     if unsupported_error is not None:
         raise ValueError(unsupported_error)

@@ -72,8 +72,9 @@ The local lowering path currently covers a bounded subset including:
 | Goto repetition `[->N]` | Supported | Depth-bounded lowering |
 | Nonconsecutive repetition `[=N]` | Supported | Depth-bounded lowering |
 | `$rose/$fell/$stable/$changed` inside property terms | Supported | Lowered with sampled helper state on the pure `sby` path |
-| `assert property` / `assume property` / `cover property` | Supported | Named-property path |
-| `disable iff` | Supported | Lowered into monitor gating |
+| `assert property` / `assume property` / `cover property` | Supported | Named and anonymous forms, including multiline action statements |
+| `default clocking` | Supported | Single module-level default clocking in one-line or multiline form |
+| `disable iff` | Supported | Inline or single module-level default `disable iff` |
 | Existing `.sby` files | Supported | Wrapper stages and rewrites sources |
 | Optional `ebmc` backend | Supported | For operators outside the safe local subset |
 
@@ -254,6 +255,8 @@ Known limits include:
 - general ranged-delay and repetition forms outside the implemented patterns
 - exact unbounded lowering for `[->]` and `[=]`
 - multi-clock properties
+- multiple default clocking / default disable declarations or scoped redefinition
+- labeled concurrent action statements on the local lowering path
 - bare multicycle `assert property` without an implication wrapper
 - full multi-module lowering in one pass
 
@@ -263,7 +266,8 @@ supported set.
 ## TODO / Roadmap
 
 The next frontend targets are the operators and behaviors that are currently
-outside the safe local lowering subset.
+outside the safe local lowering subset. The active backlog is also tracked in
+[TODO.md](TODO.md).
 
 Priority SVA work:
 
@@ -278,7 +282,8 @@ Priority SVA work:
 Lowering and infrastructure work:
 
 - exact unbounded automata for `[->]` and `[=]`, instead of the current bounded encoding
-- better support for anonymous inline properties
+- labeled concurrent action statements and attributes before action statements
+- scoped or repeated `default clocking` / `default disable iff` handling
 - support for bare multicycle `assert property` sequence forms
 - stronger multi-module lowering and bind handling
 - multi-clock property support
