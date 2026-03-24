@@ -111,17 +111,30 @@ For unsupported operators:
 - `sby` on `PATH`
 - `ebmc` on `PATH` if you want the optional fallback path
 
+### Install The Command
+
+The command examples below assume you have installed the wrapper once into the
+OSS-CAD suite bin directory:
+
+```bash
+bash tools/install_bin_link.sh
+```
+
+The wrapper also prepends the sibling OSS-CAD tool suite bin directory when it
+runs, so bundled tools like `sby`, `ebmc`, and `gtkwave` are found even when
+your shell `PATH` is minimal.
+
 ### Run The Wrapper
 
 ```bash
-./formal examples/sva/assert_raw_delay_pass.sby
-./formal examples/sva/assert_raw_delay_pass.sv
-./formal examples/sva/assert_goto_pass.sby prove
-./formal examples/sva/assert_nonconsecutive_fail.sby bmc
-./formal -waves examples/sva/assert_raw_delay_fail.sby
+sva2sby examples/sva/assert_raw_delay_pass.sby
+sva2sby examples/sva/assert_raw_delay_pass.sv
+sva2sby examples/sva/assert_goto_pass.sby prove
+sva2sby examples/sva/assert_nonconsecutive_fail.sby bmc
+sva2sby -waves examples/sva/assert_raw_delay_fail.sby
 ```
 
-When given a `.sv` or `.sby` path directly, `formal` automatically routes to
+When given a `.sv` or `.sby` path directly, `sva2sby` automatically routes to
 the wrapper and creates a default workdir under `build/formal_runs/`.
 
 `-waves` / `--waves` scans the generated workdir after the run and opens any
@@ -130,7 +143,7 @@ the wrapper and creates a default workdir under `build/formal_runs/`.
 ### Run The GUI
 
 ```bash
-./formal gui --port 8080
+sva2sby gui --port 8080
 ```
 
 Then open `http://127.0.0.1:8080` in a browser. The GUI can launch custom
@@ -139,21 +152,6 @@ paths directly from the form, tail live logs, and preview generated text
 artifacts from each run directory. Relative paths in the form resolve from the
 selected project root, and generated runs default to
 `<project-root>/build/formal_runs/`.
-
-### Install On PATH
-
-The wrapper now prepends the sibling OSS-CAD tool suite bin directory when it
-runs, so bundled tools like `sby`, `ebmc`, and `gtkwave` are found even when
-your shell `PATH` is minimal.
-
-To expose the wrapper itself as a command from anywhere, install the repo entry
-point into the suite bin directory:
-
-```bash
-bash tools/install_bin_link.sh
-sva2sby examples/sva/assert_raw_delay_pass.sby
-sva2sby gui --port 8080
-```
 
 ### Run The Smoke Test
 
@@ -175,20 +173,20 @@ The smoke test currently does:
 ### Direct RTL File
 
 ```bash
-./formal path/to/design.sv --top top_name --mode bmc --depth 20
+sva2sby path/to/design.sv --top top_name --mode bmc --depth 20
 ```
 
 ### Existing `.sby` Project
 
 ```bash
-./formal path/to/project.sby
-./formal path/to/project.sby prove
+sva2sby path/to/project.sby
+sva2sby path/to/project.sby prove
 ```
 
 ### Compatibility Mode For Verific-Gated Inputs
 
 ```bash
-./formal path/to/project.sby prove --compat
+sva2sby path/to/project.sby prove --compat
 ```
 
 `--compat` maps to the wrapper’s `--strip-verific` mode, which comments out

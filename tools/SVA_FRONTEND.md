@@ -83,24 +83,20 @@ on `read -verific` but otherwise fit the lowered subset:
 It assumes `sby` is already on `PATH`. If you want backend auto-detection to
 use EBMC for unsupported operators, `ebmc` must also be on `PATH`.
 
-Examples:
+Install the command once, then use the wrapper directly:
 
 ```bash
-python3 tools/sva_sby.py /path/to/input.sv --top top_module --engine "smtbmc yices"
-python3 tools/sva_sby.py /path/to/input.sby --workdir build/sva_from_sby
-python3 tools/sva_sby.py /path/to/input.sby prove --workdir build/sva_from_sby_prove
-python3 tools/sva_sby.py /path/to/input.sby prove --strip-verific --workdir build/sva_from_sby_prove
-python3 tools/sva_sby.py /path/to/full_sva_input.sby prove --backend auto --workdir build/full_sva
-```
-
-For shorter day-to-day use there is also a repo-local wrapper:
-
-```bash
-./formal examples/sva/assert_raw_delay_pass.sby
-./formal examples/sva/assert_goto_pass.sby prove
-./formal examples/sva/assert_nonconsecutive_pass.sby prove
-./formal path/to/props.sby prv --compat
-./formal examples/sva/assert_raw_delay_pass.sv
+bash tools/install_bin_link.sh
+sva2sby /path/to/input.sv --top top_module --engine "smtbmc yices"
+sva2sby /path/to/input.sby --workdir build/sva_from_sby
+sva2sby /path/to/input.sby prove --workdir build/sva_from_sby_prove
+sva2sby /path/to/input.sby prove --strip-verific --workdir build/sva_from_sby_prove
+sva2sby /path/to/full_sva_input.sby prove --backend auto --workdir build/full_sva
+sva2sby examples/sva/assert_raw_delay_pass.sby
+sva2sby examples/sva/assert_goto_pass.sby prove
+sva2sby examples/sva/assert_nonconsecutive_pass.sby prove
+sva2sby path/to/props.sby prv --compat
+sva2sby examples/sva/assert_raw_delay_pass.sv
 ```
 
 Shared smoke test:
@@ -109,7 +105,7 @@ Shared smoke test:
 bash tools/smoke_test.sh
 ```
 
-When `./formal` is given a `.sby` or `.sv` path directly it defaults to the
+When `sva2sby` is given a `.sby` or `.sv` path directly it defaults to the
 `sby` subcommand, infers `--top` from the filename for direct `.sv` input, and
 creates a default workdir under `build/formal_runs/`.
 
@@ -124,8 +120,7 @@ path currently does not handle:
   repetition `[=]`
 - `throughout` beyond the current exact-delay rhs subset
 - multi-clock properties
-- multicycle bare `assert property` without an implication wrapper
-- lowering multiple-module files in one pass
+- direct standalone lowering still centers on the wrapper path rather than a full multi-module SystemVerilog parser
 
 Those cases should go through the `ebmc` backend instead of the lowerer.
 
@@ -149,4 +144,3 @@ sequences, `disable iff`, and the exact-delay `throughout` subset. Remaining
 EBMC-only forms in that check include:
 
 - `throughout` outside the current exact-delay rhs subset
-- multicycle bare `assert property` without an implication wrapper

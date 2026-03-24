@@ -61,45 +61,46 @@ Files:
 - `mux2x1.sv`
 - `mux2x1.sby`
 
-Use the wrapper at the repo root:
+Install the command once, then run the examples from anywhere:
 
 ```bash
-./formal examples/sva/assert_raw_delay_pass.sby
-./formal examples/sva/assert_raw_delay_pass.sv
-./formal examples/sva/assert_goto_pass.sby bmc
-./formal examples/sva/assert_goto_pass.sby prove
-./formal examples/sva/assert_goto_fail.sby bmc
-./formal examples/sva/assert_goto_fail.sby prove
-./formal examples/sva/assert_nonconsecutive_pass.sby bmc
-./formal examples/sva/assert_nonconsecutive_pass.sby prove
-./formal examples/sva/assert_nonconsecutive_fail.sby bmc
-./formal examples/sva/assert_nonconsecutive_fail.sby prove
+bash tools/install_bin_link.sh
+sva2sby examples/sva/assert_raw_delay_pass.sby
+sva2sby examples/sva/assert_raw_delay_pass.sv
+sva2sby examples/sva/assert_goto_pass.sby bmc
+sva2sby examples/sva/assert_goto_pass.sby prove
+sva2sby examples/sva/assert_goto_fail.sby bmc
+sva2sby examples/sva/assert_goto_fail.sby prove
+sva2sby examples/sva/assert_nonconsecutive_pass.sby bmc
+sva2sby examples/sva/assert_nonconsecutive_pass.sby prove
+sva2sby examples/sva/assert_nonconsecutive_fail.sby bmc
+sva2sby examples/sva/assert_nonconsecutive_fail.sby prove
 ```
 
 If you prefer a real `.sby` file, use the wrapper on the example config:
 
 ```bash
-python3 tools/sva_sby.py examples/sva/assert_raw_delay_pass.sby --workdir build/example_runs/assert_raw_delay_pass_from_sby
-python3 tools/sva_sby.py examples/sva/cover_named_delay_hit.sby --workdir build/example_runs/cover_named_delay_hit_from_sby
-python3 tools/sva_sby.py examples/sva/assert_goto_pass.sby --workdir build/example_runs/assert_goto_pass_from_sby
-python3 tools/sva_sby.py examples/sva/assert_goto_fail.sby --workdir build/example_runs/assert_goto_fail_from_sby
+sva2sby examples/sva/assert_raw_delay_pass.sby --workdir build/example_runs/assert_raw_delay_pass_from_sby
+sva2sby examples/sva/cover_named_delay_hit.sby --workdir build/example_runs/cover_named_delay_hit_from_sby
+sva2sby examples/sva/assert_goto_pass.sby --workdir build/example_runs/assert_goto_pass_from_sby
+sva2sby examples/sva/assert_goto_fail.sby --workdir build/example_runs/assert_goto_fail_from_sby
 ```
 
 The wrapper also forwards task names to `sby`, so the `.sby` file can control
 mode and solver selection directly:
 
 ```bash
-python3 tools/sva_sby.py examples/sva/assert_raw_delay_tasks.sby prove --workdir build/example_runs/assert_raw_delay_tasks_prove
-python3 tools/sva_sby.py examples/sva/assert_raw_delay_tasks.sby cover --workdir build/example_runs/assert_raw_delay_tasks_cover
-./formal examples/sva/assert_raw_delay_tasks.sby prove
-./formal examples/sva/assert_raw_delay_tasks.sby cover
+sva2sby examples/sva/assert_raw_delay_tasks.sby prove --workdir build/example_runs/assert_raw_delay_tasks_prove
+sva2sby examples/sva/assert_raw_delay_tasks.sby cover --workdir build/example_runs/assert_raw_delay_tasks_cover
+sva2sby examples/sva/assert_raw_delay_tasks.sby prove
+sva2sby examples/sva/assert_raw_delay_tasks.sby cover
 ```
 
 Or run the tools directly:
 
 ```bash
 ebmc examples/sva/assert_raw_delay_pass.sv --top assert_raw_delay_pass --bound 4 --trace
-python3 tools/sva_sby.py examples/sva/assert_raw_delay_pass.sv --top assert_raw_delay_pass --workdir build/example_runs/assert_raw_delay_pass_sby --mode bmc --depth 4 --engine "smtbmc yices"
+sva2sby examples/sva/assert_raw_delay_pass.sv --top assert_raw_delay_pass --workdir build/example_runs/assert_raw_delay_pass_sby --mode bmc --depth 4 --engine "smtbmc yices"
 ```
 
 The local lowering path now includes depth-bounded support for goto repetition
@@ -110,14 +111,14 @@ examples have both:
 - `prove` using `smtbmc yices`
 
 ```bash
-./formal examples/sva/assert_goto_pass.sby bmc
-./formal examples/sva/assert_goto_pass.sby prove
-./formal examples/sva/assert_goto_fail.sby bmc
-./formal examples/sva/assert_goto_fail.sby prove
-./formal examples/sva/assert_nonconsecutive_pass.sby bmc
-./formal examples/sva/assert_nonconsecutive_pass.sby prove
-./formal examples/sva/assert_nonconsecutive_fail.sby bmc
-./formal examples/sva/assert_nonconsecutive_fail.sby prove
+sva2sby examples/sva/assert_goto_pass.sby bmc
+sva2sby examples/sva/assert_goto_pass.sby prove
+sva2sby examples/sva/assert_goto_fail.sby bmc
+sva2sby examples/sva/assert_goto_fail.sby prove
+sva2sby examples/sva/assert_nonconsecutive_pass.sby bmc
+sva2sby examples/sva/assert_nonconsecutive_pass.sby prove
+sva2sby examples/sva/assert_nonconsecutive_fail.sby bmc
+sva2sby examples/sva/assert_nonconsecutive_fail.sby prove
 ```
 
 Standalone failing examples now exist for the supported feature families that
