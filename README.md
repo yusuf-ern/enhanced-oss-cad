@@ -1,4 +1,4 @@
-# enhanced-oss-cad
+# sva2sby
 
 Concurrent SVA experimentation on top of the open-source formal stack.
 
@@ -151,8 +151,8 @@ point into the suite bin directory:
 
 ```bash
 bash tools/install_bin_link.sh
-enhanced-oss-cad examples/sva/assert_raw_delay_pass.sby
-enhanced-oss-cad gui --port 8080
+sva2sby examples/sva/assert_raw_delay_pass.sby
+sva2sby gui --port 8080
 ```
 
 ### Run The Smoke Test

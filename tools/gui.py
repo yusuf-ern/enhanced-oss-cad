@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local web GUI for running enhanced-oss-cad formal jobs."""
+"""Local web GUI for running sva2sby formal jobs."""
 
 from __future__ import annotations
 
@@ -1649,7 +1649,7 @@ def main(argv: list[str] | None = None) -> int:
     registry = JobRegistry()
     server = GuiServer((args.host, args.port), registry, args.project_root.resolve())
     url = f"http://{args.host}:{args.port}"
-    print(f"enhanced-oss-cad GUI listening on {url}")
+    print(f"sva2sby GUI listening on {url}")
     if args.open_browser:
         webbrowser.open(url)
     try:
