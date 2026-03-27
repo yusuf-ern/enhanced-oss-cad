@@ -1,8 +1,8 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
 echo "pre-push: running smoke tests"
-bash tools/smoke_test.sh
+sh tools/smoke_test.sh
