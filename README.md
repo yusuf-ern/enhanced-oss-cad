@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # ⚡ sva2sby
 
@@ -46,7 +46,7 @@ Open-source formal verification tools are strong at RTL-level checks, but concur
 
 | SVA Construct | Support | Notes |
 |:---|:---:|:---|
-| `\|->` / `\|=>` implication | ✅ | Overlapping and non-overlapping |
+| Implication `\|->` / `\|=>` | ✅ | Overlapping and non-overlapping |
 | Fixed delay `##N` | ✅ | Direct lowering |
 | Ranged delay `##[M:N]` | ✅ | Bounded |
 | Bounded repetition `[*M:N]` | ✅ | Consecutive, with chained tails |
@@ -61,7 +61,7 @@ Open-source formal verification tools are strong at RTL-level checks, but concur
 | `assert` / `assume` / `cover property` | ✅ | Named, anonymous, labeled, multiline |
 | Inline `[file ...]` blocks | ✅ | Lowered in-place within `.sby` |
 
-### `.sby` Wrapper (`sva_sby`)
+### .sby Wrapper (sva_sby)
 
 - **Transparent staging** — copies and lowers source files into a generated workdir; originals are never modified
 - **Task & engine support** — respects `[tasks]`, per-task `[options]`, and per-task `[engines]` sections
@@ -71,7 +71,7 @@ Open-source formal verification tools are strong at RTL-level checks, but concur
 - **Formal read marking** — scripts referencing lowered files get `-formal` added to their `read` commands
 - **Depth auto-expansion** — prove tasks using bounded-eventual monitors have their depth automatically doubled for k-induction soundness
 
-### CLI Wrapper (`formal`)
+### CLI Wrapper (formal)
 
 ```bash
 # Run directly on a .sv file
@@ -130,7 +130,7 @@ A local web interface at `http://127.0.0.1:8080` with:
 
 ```bash
 # Clone the repo
-git clone <repo-url> && cd sva2sby
+git clone https://github.com/yusuf-ern/sva2sby.git && cd sva2sby
 
 # Install the command link into your tool bin
 bash tools/install_bin_link.sh
@@ -167,10 +167,10 @@ bash tools/smoke_test.sh
 
 ```
 sva2sby/
-├── formal                         # Shell entrypoint (→ tools/formal.py)
+├── formal                         # Shell entrypoint (-> tools/formal.py)
 ├── tools/
 │   ├── formal.py                  # CLI wrapper with subcommands (sby, gui)
-│   ├── sva_lower.py               # SVA → formal RTL lowering engine
+│   ├── sva_lower.py               # SVA -> formal RTL lowering engine
 │   ├── sva_sby.py                 # .sby staging, backend selection, ebmc driver
 │   ├── gui.py                     # Local web GUI server
 │   ├── smoke_test.sh              # Full smoke test script
@@ -214,21 +214,21 @@ Each `.sv` file has a matching `.sby` file for wrapper-mode testing.
 
 ## ⚙️ How It Works
 
-### Direct `.sv` Mode
+### Direct .sv Mode
 
 ```
-design.sv → sva_lower (parse + lower) → lowered.sv → generate run.sby → sby
+design.sv -> sva_lower (parse + lower) -> lowered.sv -> generate run.sby -> sby
 ```
 
 1. Parse SVA constructs from the source
-2. Lower into explicit monitor registers + `assert`/`assume`/`cover` under `` `ifdef FORMAL ``
+2. Lower into explicit monitor registers + `assert`/`assume`/`cover` under `ifdef FORMAL
 3. Generate a temporary `.sby` with the lowered source
 4. Run `sby` on the generated project
 
-### `.sby` Wrapper Mode
+### .sby Wrapper Mode
 
 ```
-project.sby → parse sections → stage sources → lower SVA in copies → rewrite .sby → sby
+project.sby -> parse sections -> stage sources -> lower SVA in copies -> rewrite .sby -> sby
 ```
 
 1. Parse the original `.sby` into structured sections
@@ -266,4 +266,3 @@ Exact unbounded automata for `[->]`/`[=]` · broader `throughout` coverage · sc
 ## 📄 License
 
 MIT
-]]>
