@@ -46,7 +46,7 @@ INDEX_HTML = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Enhanced OSS-CAD</title>
+  <title>sva2sby</title>
   <style>
     :root {
       --bg: #f4efe2;
@@ -461,7 +461,7 @@ INDEX_HTML = """<!doctype html>
   <div class="shell">
     <section class="hero">
       <article class="hero-card">
-        <h1>Enhanced OSS-CAD control room</h1>
+        <h1>sva2sby</h1>
         <p class="hero-copy">
           Launch the existing formal wrapper against any local project, inspect generated
           work directories, and keep ad hoc runs and repo samples in one place.
@@ -543,8 +543,8 @@ INDEX_HTML = """<!doctype html>
             <label>
               Backend
               <select id="backend" name="backend">
+                <option value="sby" selected>sby</option>
                 <option value="auto">auto</option>
-                <option value="sby">sby</option>
                 <option value="ebmc">ebmc</option>
               </select>
             </label>
@@ -1243,7 +1243,7 @@ def parse_run_request(payload: dict[str, object], default_project_root: Path) ->
     engine = payload.get("engine")
     mode = payload.get("mode", "bmc")
     depth = payload.get("depth", 5)
-    backend = payload.get("backend", "auto")
+    backend = payload.get("backend", "sby")
     compat = bool(payload.get("compat", False))
     work_root_raw = payload.get("work_root")
     if work_root_raw is None or (isinstance(work_root_raw, str) and not work_root_raw.strip()):
@@ -1423,6 +1423,16 @@ class JobRegistry:
             self._jobs[job_id] = job
             return job
 
+    def reap_finished(self) -> None:
+        """Call wait() on any finished processes to prevent zombies."""
+        with self._lock:
+            for job in self._jobs.values():
+                if job.process.poll() is not None:
+                    try:
+                        job.process.wait(timeout=0)
+                    except subprocess.TimeoutExpired:
+                        pass
+
     def list_jobs(self) -> list[GuiJob]:
         with self._lock:
             return sorted(self._jobs.values(), key=lambda job: job.created_at, reverse=True)
@@ -1441,9 +1451,28 @@ class JobRegistry:
         job.process.terminate()
         return True
 
+    def shutdown(self) -> None:
+        """Terminate all running jobs and reap their processes."""
+        with self._lock:
+            for job in self._jobs.values():
+                if job.process.poll() is None:
+                    job.process.terminate()
+            for job in self._jobs.values():
+                try:
+                    job.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    job.process.kill()
+                    job.process.wait()
+
 
 def job_to_dict(job: GuiJob) -> dict[str, object]:
     returncode = job.process.poll()
+    if returncode is not None:
+        # Reap the finished process to prevent zombie accumulation.
+        try:
+            job.process.wait(timeout=0)
+        except subprocess.TimeoutExpired:
+            pass
     status = "running" if returncode is None else ("succeeded" if returncode == 0 else "failed")
     return {
         "id": job.id,
@@ -1530,6 +1559,15 @@ class GuiHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
         base_dir = resolve_browser_directory(query.get("base", [""])[0], self.server.project_root)
         directory = resolve_browser_directory(query.get("path", [""])[0], base_dir)
+        # Restrict browsing to the project root to prevent path traversal.
+        try:
+            directory.resolve().relative_to(self.server.project_root.resolve())
+        except ValueError:
+            self._respond_error(
+                HTTPStatus.FORBIDDEN,
+                f"path {directory} is outside the project root",
+            )
+            return
         include_files = query.get("files", ["0"])[0].strip().lower() not in {"", "0", "false", "no"}
         try:
             entries = browse_directory_entries(directory, include_files)
@@ -1537,6 +1575,11 @@ class GuiHandler(BaseHTTPRequestHandler):
             self._respond_error(HTTPStatus.BAD_REQUEST, f"unable to browse {directory}: {exc}")
             return
         parent = directory.parent if directory.parent != directory else directory
+        # Clamp parent to project root boundary.
+        try:
+            parent.resolve().relative_to(self.server.project_root.resolve())
+        except ValueError:
+            parent = self.server.project_root
         self._respond_json(
             {
                 "current_path": str(directory),
@@ -1657,6 +1700,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("\nshutting down GUI")
     finally:
+        registry.shutdown()
         server.server_close()
     return 0
 

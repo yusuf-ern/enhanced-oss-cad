@@ -211,6 +211,16 @@ def mask_comments(text: str) -> str:
     chars = list(text)
     index = 0
     while index < len(chars):
+        # Skip over string literals so that // and /* inside them are preserved.
+        if chars[index] == '"':
+            index += 1
+            while index < len(chars) and chars[index] != '"':
+                if chars[index] == "\\" and index + 1 < len(chars):
+                    index += 2  # skip escaped character
+                else:
+                    index += 1
+            index += 1  # skip closing quote
+            continue
         if chars[index] == "/" and index + 1 < len(chars):
             nxt = chars[index + 1]
             if nxt == "/":
@@ -2278,7 +2288,6 @@ def lower_text(text: str, bounded_eventual_depth: int | None = None) -> str:
     transformed = PROPERTY_RE.sub(collect_property, transformed)
 
     emitted_blocks: list[str] = []
-    unsupported_error: str | None = None
     action_index = 0
     rewritten_parts: list[str] = []
     last_end = 0
@@ -2330,17 +2339,15 @@ def lower_text(text: str, bounded_eventual_depth: int | None = None) -> str:
                 )
             )
             rewritten_parts.append(f"{match.group('indent')}// sva_lower: lowered {kind} property ({comment_name})\n")
-        except ValueError as exc:
-            if unsupported_error is None:
-                unsupported_error = str(exc)
-            rewritten_parts.append(match.group(0))
+        except ValueError:
+            # Fail immediately — avoid producing a mix of lowered and unlowered
+            # statements that would be discarded anyway.
+            raise
         last_end = match.end()
 
     rewritten_parts.append(transformed[last_end:])
     transformed = "".join(rewritten_parts)
 
-    if unsupported_error is not None:
-        raise ValueError(unsupported_error)
     if not emitted_blocks:
         raise ValueError("No supported property statements were found")
 

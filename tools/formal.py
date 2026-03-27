@@ -23,6 +23,9 @@ def is_formal_input(arg: str) -> bool:
 def normalize_argv(argv: list[str]) -> list[str]:
     if argv and argv[0] in {"sby", "gui"}:
         return argv
+    # Don't prepend 'sby' if 'gui' appears as an argument (e.g. after options).
+    if "gui" in argv:
+        return argv
     if any(is_formal_input(arg) for arg in argv):
         return ["sby", *argv]
     return argv
@@ -165,7 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
     sby.add_argument(
         "--backend",
         choices=["auto", "sby", "ebmc"],
-        default="auto",
+        default="sby",
         help="Backend selection; auto uses ebmc for full-SVA operators and sby otherwise",
     )
     sby.add_argument(

@@ -63,6 +63,16 @@ class FormalCliTests(unittest.TestCase):
             (workdir / "run" / "engine_0" / "trace.vcd").write_text("$date\n")
             traces = formal.find_wave_traces(workdir)
             self.assertEqual(traces, [workdir / "run" / "engine_0" / "trace.vcd"])
+    def test_normalize_argv_does_not_prepend_sby_when_gui_in_argv(self) -> None:
+        self.assertEqual(
+            formal.normalize_argv(["gui", "--project-root", "/path/to/thing.sv"]),
+            ["gui", "--project-root", "/path/to/thing.sv"],
+        )
+        # gui not at argv[0] should still be recognized
+        self.assertEqual(
+            formal.normalize_argv(["--some-flag", "gui"]),
+            ["--some-flag", "gui"],
+        )
 
 
 if __name__ == "__main__":

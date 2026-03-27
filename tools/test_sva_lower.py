@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import unittest
 
-from sva_lower import FixedSequence, lower_text, parse_sequence_expr
+from sva_lower import FixedSequence, lower_text, mask_comments, parse_sequence_expr
 
 
 class SvaLowerTests(unittest.TestCase):
@@ -390,6 +390,22 @@ endmodule
             lowered,
         )
         self.assertNotIn("$past(((((a) == ($past((a))))))", lowered)
+
+    def test_mask_comments_preserves_slashes_inside_strings(self) -> None:
+        text = '$display("a//b"); // real comment'
+        masked = mask_comments(text)
+        self.assertIn('"a//b"', masked)
+        self.assertNotIn("real comment", masked)
+
+    def test_mask_comments_preserves_block_comment_delimiters_in_strings(self) -> None:
+        text = '$display("start /* middle */ end");'
+        masked = mask_comments(text)
+        self.assertIn('"start /* middle */ end"', masked)
+
+    def test_mask_comments_handles_escaped_quote_in_string(self) -> None:
+        text = r'$display("escaped \" quote // inside");'
+        masked = mask_comments(text)
+        self.assertIn("//", masked)
 
 
 if __name__ == "__main__":

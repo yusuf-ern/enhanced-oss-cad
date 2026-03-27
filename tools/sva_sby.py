@@ -90,6 +90,10 @@ MODULE_HEADER_RE = re.compile(
     re.DOTALL,
 )
 MODULE_END_RE = re.compile(r"^\s*endmodule\b.*(?:\r?\n|$)", re.MULTILINE)
+# NOTE: the port parser below is intentionally simple and may not handle all
+# valid SystemVerilog port syntax (e.g. ports with default values, unpacked
+# array dimensions, or interface ports).  This is only used for bind
+# rewriting; failures fall back to passthrough mode which is safe.
 PORT_DECL_RE = re.compile(
     r"\b(?:input|output|inout)\b(?P<decl>.*?)(?=(?:\binput\b|\boutput\b|\binout\b)|\Z)",
     re.DOTALL,
@@ -224,7 +228,9 @@ def engine_is_smtbmc(engine: str | None) -> bool:
 
 
 def induction_prove_depth(bound: int) -> int:
-    return max(bound, bound * 2)
+    # Bounded-eventual monitors need up to `bound` extra cycles to mature, so
+    # k-induction must use at least 2× the original depth to avoid vacuous proofs.
+    return bound * 2
 
 
 def stage_source_path_raw(source_path: Path, staged_path: Path) -> None:
@@ -1050,7 +1056,7 @@ def sby_requires_ebmc(input_path: Path) -> bool:
 
 def extract_task_mode_depth(sections: list[SbySection], task: str) -> tuple[str, int]:
     mode = "bmc"
-    depth = 20
+    depth = 20  # matches sby's own default when [options] omits depth
     for section in sections:
         if section.name != "options":
             continue
@@ -1175,6 +1181,9 @@ def run_ebmc_task(config: EbmcTaskConfig, workdir: Path, env: dict[str, str]) ->
 
 
 def make_env() -> dict[str, str]:
+    # NOTE: this duplicates formal.tool_env(); prefer importing formal.tool_env()
+    # when sva_sby.py is invoked through formal.py.  Kept here as a fallback for
+    # standalone invocations that bypass the formal wrapper.
     env = os.environ.copy()
     if TOOL_BIN.exists():
         current_path = env.get("PATH", "")
@@ -1195,7 +1204,7 @@ def main() -> int:
     parser.add_argument(
         "--backend",
         choices=["auto", "sby", "ebmc"],
-        default="auto",
+        default="sby",
         help="Backend selection: lower-to-sby, direct ebmc, or auto-detect",
     )
     parser.add_argument(
